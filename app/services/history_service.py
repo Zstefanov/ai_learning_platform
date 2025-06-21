@@ -35,3 +35,29 @@ def save_history(history: List[Dict]) -> None:
     """
     with open(HISTORY_FILE, "w") as f:
         json.dump(history, f, indent=4)
+
+# Delete a chat history item
+def delete_history_item(index: int) -> Dict:
+    """
+    Delete a chat history item by its index.
+    Returns a dictionary with status and message.
+    """
+    try:
+        history = load_history()
+        # Check if there's a hint in the history
+        if len(history) == 1 and "hint" in history[0]:
+            return {"status": "error", "message": f"Cannot delete: {history[0]['hint']}"}
+
+        # Check if the index is valid
+        if index < 0 or index >= len(history):
+            return {"status": "error", "message": "Invalid index"}
+
+        # Remove the item
+        removed_item = history.pop(index)
+
+        # Save the updated history
+        save_history(history)
+
+        return {"status": "success", "message": "History item deleted", "deleted_item": removed_item}
+    except Exception as e:
+        return {"status": "error", "message": f"Failed to delete history item: {str(e)}"}

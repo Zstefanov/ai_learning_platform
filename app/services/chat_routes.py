@@ -38,3 +38,39 @@ async def get_history():
             })
 
     return formatted_history
+
+
+@router.delete("/history/{index}")
+async def delete_history_item(index: int):
+    """
+    Delete a specific chat history item by its index.
+    Args:
+        index: The index of the chat history item to delete
+    Returns:
+        A dictionary with the status of the operation
+    """
+    # Load the current history
+    raw_history = load_history()
+
+    # Check if the index is valid for the formatted history
+    formatted_length = len(raw_history) // 2
+    if index < 0 or index >= formatted_length:
+        return {"status": "error",
+                "message": f"Invalid index: {index}. Valid range is 0-{formatted_length - 1 if formatted_length > 0 else 0}"}
+
+    # Calculate the actual indices in the raw history
+    user_index = index * 2
+    bot_index = user_index + 1
+
+    # Remove both user and bot messages
+    if bot_index < len(raw_history):
+        # Remove the bot message first (higher index)
+        raw_history.pop(bot_index)
+    if user_index < len(raw_history):
+        # Then remove the user message
+        raw_history.pop(user_index)
+
+    # Save the updated history
+    save_history(raw_history)
+
+    return {"status": "success", "message": f"History item {index} deleted"}
