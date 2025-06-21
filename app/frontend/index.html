@@ -3,6 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <title>AI Learning Chat</title>
+  <!-- Import highlight.js for code syntax highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+  <!-- Import marked.js for Markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     :root {
       --border-light: rgba(255, 255, 255, 0.15);
@@ -278,16 +283,96 @@
       width: calc(100% - 3em); /* Account for padding */
       margin-left: auto;
       margin-right: auto;
+      text-align: left; /* Align text to the left for better readability */
     }
 
-    .user {
+    /* Message styling */
+    .message {
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .message:last-child {
+      border-bottom: none;
+    }
+
+    .message-header {
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .user .message-header {
       color: #60a5fa;
     }
 
-    .bot {
+    .bot .message-header {
       color: #34d399;
     }
 
+    .message-content {
+      line-height: 1.5;
+    }
+
+    /* Markdown content styles */
+    .message-content p {
+      margin: 0 0 10px 0;
+    }
+
+    .message-content ul, .message-content ol {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+
+    .message-content li {
+      margin-bottom: 5px;
+    }
+
+    .message-content pre {
+      background: #252525;
+      border-radius: 5px;
+      padding: 10px;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+
+    .message-content code {
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+
+    /* Inline code */
+    .message-content code:not(pre code) {
+      background: #252525;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+
+    /* Highlight.js theme overrides to match our dark theme better */
+    .hljs {
+      background: #252525;
+      border-radius: 5px;
+      padding: 10px;
+    }
+
+    /* Tables */
+    .message-content table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 10px 0;
+    }
+
+    .message-content th, .message-content td {
+      border: 1px solid #444;
+      padding: 8px;
+      text-align: left;
+    }
+
+    .message-content th {
+      background-color: #252525;
+    }
+
+    /* Input area */
     .input-container {
       position: relative;
       width: 100%;
@@ -488,7 +573,7 @@
   <div class="main" id="main-content">
     <div class="container">
       <div class="header">
-        <h2>Hello there! How can I help?</h2>
+        <h2>AI LEARNING ASSISTANT</h2>
       </div>
       <div id="chat"></div>
       <div class="input-container">
@@ -529,6 +614,17 @@
     const messageInput = document.getElementById("message");
     const chatBox = document.getElementById("chat");
     const dropdownMenu = document.getElementById("dropdown-menu");
+
+    // Configure marked.js options
+    marked.setOptions({
+      highlight: function(code, lang) {
+        const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+        return hljs.highlight(code, { language }).value;
+      },
+      langPrefix: 'hljs language-', // CSS language prefix
+      breaks: true, // Add line breaks
+      gfm: true, // GitHub Flavored Markdown
+    });
 
     // Variable to store the index of the item to delete
     let itemToDeleteIndex = null;
@@ -690,8 +786,49 @@
       }
     }
 
+    // Function to display a chat message with proper formatting
     function displayChat(item) {
-      chatBox.innerHTML = `<p class="user"><b>You:</b> ${item.user}</p><p class="bot"><b>AI:</b> ${item.bot}</p>`;
+      chatBox.innerHTML = '';
+
+      // Add user message
+      addMessageToChat('user', item.user);
+
+      // Add bot message with markdown parsing
+      addMessageToChat('bot', item.bot, true);
+
+      // Scroll to bottom
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // Helper function to add a formatted message to the chat
+    function addMessageToChat(role, content, parseMarkdown = false) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${role}`;
+
+      // Add header with role label
+      const headerDiv = document.createElement('div');
+      headerDiv.className = 'message-header';
+      headerDiv.textContent = role === 'user' ? 'You:' : 'AI:';
+      messageDiv.appendChild(headerDiv);
+
+      // Add content
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'message-content';
+
+      if (parseMarkdown) {
+        // Parse markdown content
+        contentDiv.innerHTML = marked.parse(content);
+      } else {
+        contentDiv.textContent = content;
+      }
+
+      messageDiv.appendChild(contentDiv);
+      chatBox.appendChild(messageDiv);
+
+      // Apply syntax highlighting to code blocks
+      document.querySelectorAll('pre code').forEach((block) => {
+        hljs.highlightElement(block);
+      });
     }
 
     async function sendMessage() {
@@ -699,7 +836,8 @@
 
       if (!msg.trim()) return; // Prevent sending empty messages
 
-      chatBox.innerHTML += `<p class="user"><b>You:</b> ${msg}</p>`;
+      // Add user message
+      addMessageToChat('user', msg);
       messageInput.value = "";
 
       try {
@@ -714,14 +852,26 @@
         }
 
         const data = await res.json();
-        chatBox.innerHTML += `<p class="bot"><b>AI:</b> ${data.response}</p>`;
+
+        // Add bot response with markdown parsing
+        addMessageToChat('bot', data.response, true);
+
         chatBox.scrollTop = chatBox.scrollHeight;
 
         // Refresh history to show the new chat
         fetchHistory();
       } catch (error) {
         console.error("Error sending message:", error);
-        chatBox.innerHTML += `<p class="bot" style="color: #f87171;"><b>Error:</b> Failed to get response. Please try again.</p>`;
+
+        // Add error message
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'message bot';
+        errorDiv.innerHTML = `<div class="message-header">AI:</div>
+                            <div class="message-content" style="color: #f87171;">
+                              <b>Error:</b> Failed to get response. Please try again.
+                            </div>`;
+        chatBox.appendChild(errorDiv);
+
         chatBox.scrollTop = chatBox.scrollHeight;
       }
     }
@@ -755,7 +905,26 @@
       this.style.height = (this.scrollHeight) + "px"; // Set to scroll height
     });
 
-    window.onload = fetchHistory; // Load history on page load
+    window.onload = function() {
+      fetchHistory(); // Load history on page load
+
+      // Initialize marked settings
+      marked.setOptions({
+        renderer: new marked.Renderer(),
+        highlight: function(code, language) {
+          if (language && hljs.getLanguage(language)) {
+            return hljs.highlight(code, { language }).value;
+          }
+          return hljs.highlightAuto(code).value;
+        },
+        pedantic: false,
+        gfm: true,
+        breaks: true,
+        sanitize: false,
+        smartypants: false,
+        xhtml: false
+      });
+    };
   </script>
 </body>
 </html>
