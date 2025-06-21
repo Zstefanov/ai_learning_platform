@@ -9,6 +9,9 @@
       --focus-highlight: #808080; /* Grey color for focus highlight */
       --scrollbar-color: #333333; /* Dark grey for scrollbar */
       --scrollbar-track: #252525; /* Even darker for the scrollbar track */
+      --sidebar-collapsed-width: 70px; /* Width of collapsed sidebar including padding */
+      --sidebar-expanded-width: 270px; /* Width of expanded sidebar including padding */
+      --dropdown-margin: 10px; /* Margin between sidebar and dropdown */
     }
 
     body {
@@ -47,9 +50,24 @@
       scrollbar-color: var(--scrollbar-color) var(--scrollbar-track);
     }
 
+    /* Dropdown in the top left, positioned dynamically */
+    .dropdown {
+      position: fixed;
+      top: 10px;
+      left: calc(var(--sidebar-collapsed-width) + var(--dropdown-margin));
+      z-index: 1000;
+      transition: left 0.3s ease;
+    }
+
+    /* Move the dropdown when the sidebar is expanded */
+    .dropdown.with-expanded-history {
+      left: calc(var(--sidebar-expanded-width) + var(--dropdown-margin));
+    }
+
     /* History Sidebar */
     .history {
       width: 50px; /* Fixed width of the sidebar */
+      height: 100vh;
       background: #18181b;
       border-right: 1px solid var(--border-light);
       overflow-y: hidden; /* Hide overflow when collapsed */
@@ -60,6 +78,10 @@
       flex-direction: column;
       align-items: center;
       transition: width 0.3s ease, overflow-y 0.3s ease;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 1100; /* Ensure it's above the dropdown */
     }
 
     .history.expanded {
@@ -99,6 +121,10 @@
       cursor: pointer;
       transition: background 0.2s;
       position: relative; /* Added for positioning the delete button */
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding-right: 30px; /* Make room for the delete button */
     }
 
     .chat-history li:hover {
@@ -166,10 +192,12 @@
       box-sizing: border-box;
       margin-left: 50px; /* Adjust for sidebar width */
       transition: margin-left 0.3s ease;
+      width: calc(100% - 50px);
     }
 
     .main.with-expanded-history {
       margin-left: 250px; /* Adjust for expanded sidebar width */
+      width: calc(100% - 250px);
     }
 
     .container {
@@ -178,9 +206,63 @@
       max-width: 900px; /* Increased from 800px for wider chat box */
     }
 
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
     h2 {
       color: #d3d3d3; /* Light-grey header color */
-      margin-bottom: 20px;
+      margin: 0;
+    }
+
+    /* Dropdown styles */
+    .dropdown-button {
+      background-color: #2b2b2b;
+      color: #fff;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dropdown-button:after {
+      content: '▼';
+      font-size: 0.8em;
+    }
+
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      z-index: 1000;
+      background-color: #2b2b2b;
+      min-width: 160px;
+      box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
+      border-radius: 4px;
+      overflow: hidden;
+      left: 0;
+      top: 100%;
+    }
+
+    .dropdown-menu a {
+      color: #fff;
+      padding: 12px 16px;
+      text-decoration: none;
+      display: block;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .dropdown-menu a:hover {
+      background-color: #3d3d3d;
+    }
+
+    .show {
+      display: block;
     }
 
     #chat {
@@ -307,7 +389,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
+      z-index: 1200;
       opacity: 0;
       visibility: hidden;
       transition: all 0.3s ease;
@@ -394,10 +476,20 @@
     <ul class="chat-history" id="chat-history"></ul>
   </div>
 
+  <!-- Dropdown Menu in Top-Left -->
+  <div class="dropdown" id="dropdown-container">
+    <button class="dropdown-button" onclick="toggleDropdown()">AI Learning</button>
+    <div id="dropdown-menu" class="dropdown-menu">
+      <a href="#" onclick="newChat()">New Chat</a>
+    </div>
+  </div>
+
   <!-- Main Content -->
   <div class="main" id="main-content">
     <div class="container">
-      <h2>AI LEARNING ASSISTANT</h2>
+      <div class="header">
+        <h2>Hello there! How can I help?</h2>
+      </div>
       <div id="chat"></div>
       <div class="input-container">
         <textarea id="message" placeholder="Ask me any programming question..."></textarea>
@@ -429,14 +521,44 @@
   <script>
     const historyPanel = document.getElementById("history-panel");
     const mainContent = document.getElementById("main-content");
+    const dropdownContainer = document.getElementById("dropdown-container");
     const toggleButton = document.getElementById("toggle-button");
     const confirmModal = document.getElementById("confirm-modal");
     const confirmDeleteBtn = document.getElementById("confirm-delete");
     const cancelDeleteBtn = document.getElementById("cancel-delete");
     const messageInput = document.getElementById("message");
+    const chatBox = document.getElementById("chat");
+    const dropdownMenu = document.getElementById("dropdown-menu");
 
     // Variable to store the index of the item to delete
     let itemToDeleteIndex = null;
+
+    function toggleDropdown() {
+      dropdownMenu.classList.toggle("show");
+    }
+
+    // Close the dropdown if clicked outside
+    window.onclick = function(event) {
+      if (!event.target.matches('.dropdown-button')) {
+        if (dropdownMenu.classList.contains('show')) {
+          dropdownMenu.classList.remove('show');
+        }
+      }
+    }
+
+    function newChat() {
+      // Clear the chat box
+      clearChatBox();
+
+      // Hide the dropdown
+      dropdownMenu.classList.remove('show');
+    }
+
+    function clearChatBox() {
+      chatBox.innerHTML = '';
+      messageInput.value = '';
+      messageInput.focus();
+    }
 
     async function fetchHistory() {
       try {
@@ -455,6 +577,22 @@
       }
     }
 
+    // Function to create a short summary from user question
+    function createSummary(text, maxLength = 15) {
+      if (!text) return "Chat";
+
+      // Remove HTML tags if any
+      text = text.replace(/<[^>]*>/g, '');
+
+      // Trim and create summary
+      text = text.trim();
+      if (text.length <= maxLength) {
+        return text;
+      } else {
+        return text.substring(0, maxLength) + "...";
+      }
+    }
+
     function renderHistory(history) {
       const chatHistoryElement = document.getElementById("chat-history");
       chatHistoryElement.innerHTML = ""; // Clear previous history
@@ -469,8 +607,13 @@
 
       history.forEach((item, index) => {
         const li = document.createElement("li");
-        li.textContent = `Chat ${index + 1}`;
+        // Create a summary from the user's question
+        const summary = createSummary(item.user);
+        li.textContent = summary;
         li.dataset.index = index; // Store the index as a data attribute
+
+        // Add title for full text on hover
+        li.title = item.user;
 
         // Create delete button
         const deleteBtn = document.createElement("button");
@@ -535,6 +678,9 @@
         const data = await res.json();
         console.log("Delete response:", data);
 
+        // Clear the chat box if the currently displayed chat was deleted
+        clearChatBox();
+
         // Refresh history after successful deletion
         fetchHistory();
 
@@ -545,19 +691,16 @@
     }
 
     function displayChat(item) {
-      const chat = document.getElementById("chat");
-      chat.innerHTML = `<p class="user"><b>You:</b> ${item.user}</p><p class="bot"><b>AI:</b> ${item.bot}</p>`;
+      chatBox.innerHTML = `<p class="user"><b>You:</b> ${item.user}</p><p class="bot"><b>AI:</b> ${item.bot}</p>`;
     }
 
     async function sendMessage() {
-      const input = document.getElementById("message");
-      const chat = document.getElementById("chat");
-      const msg = input.value;
+      const msg = messageInput.value;
 
       if (!msg.trim()) return; // Prevent sending empty messages
 
-      chat.innerHTML += `<p class="user"><b>You:</b> ${msg}</p>`;
-      input.value = "";
+      chatBox.innerHTML += `<p class="user"><b>You:</b> ${msg}</p>`;
+      messageInput.value = "";
 
       try {
         const res = await fetch("/api/chat", {
@@ -571,15 +714,15 @@
         }
 
         const data = await res.json();
-        chat.innerHTML += `<p class="bot"><b>AI:</b> ${data.response}</p>`;
-        chat.scrollTop = chat.scrollHeight;
+        chatBox.innerHTML += `<p class="bot"><b>AI:</b> ${data.response}</p>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
 
         // Refresh history to show the new chat
         fetchHistory();
       } catch (error) {
         console.error("Error sending message:", error);
-        chat.innerHTML += `<p class="bot" style="color: #f87171;"><b>Error:</b> Failed to get response. Please try again.</p>`;
-        chat.scrollTop = chat.scrollHeight;
+        chatBox.innerHTML += `<p class="bot" style="color: #f87171;"><b>Error:</b> Failed to get response. Please try again.</p>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
       }
     }
 
@@ -594,6 +737,9 @@
     function toggleHistory() {
       historyPanel.classList.toggle("expanded");
       mainContent.classList.toggle("with-expanded-history");
+
+      // Also toggle the dropdown position
+      dropdownContainer.classList.toggle("with-expanded-history");
     }
 
     // Handle Escape key to close modal

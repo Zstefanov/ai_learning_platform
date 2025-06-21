@@ -49,10 +49,10 @@
     },
     {
         "role": "user",
-        "content": "\u0440\u0430\u0437\u0431\u0438\u0440\u0430\u0448 \u043b\u0438 \u0431\u044a\u043b\u0433\u0430\u0440\u0441\u043a\u0438? "
+        "content": "asd"
     },
     {
         "role": "assistant",
-        "content": "\u0414\u0430, \u0440\u0430\u0437\u0431\u0438\u0440\u0430\u043c \u0431\u044a\u043b\u0433\u0430\u0440\u0441\u043a\u0438! (Yes, I understand Bulgarian!) I'm happy to help with any programming-related questions or topics in Bulgarian. Go ahead and ask me anything!"
+        "content": "It seems like you might have accidentally typed some gibberish. No worries! Can you please try again and tell me how I can assist you with your programming question or problem?"
     }
 ]
