@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Learning Chat</title>
+  <style>
+    :root {
+      --border-light: rgba(255, 255, 255, 0.15);
+      --focus-highlight: #808080; /* Grey color for focus highlight */
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      background-color: #000;
+      color: #fff;
+    }
+
+    /* History Sidebar */
+    .history {
+      width: 50px; /* Fixed width of the sidebar */
+      background: #18181b;
+      border-right: 1px solid var(--border-light);
+      overflow-y: hidden; /* Hide overflow when collapsed */
+      overflow-x: hidden; /* Remove horizontal scrollbar */
+      padding: 10px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: width 0.3s ease, overflow-y 0.3s ease;
+    }
+
+    .history.expanded {
+      width: 250px; /* Expanded width */
+      overflow-y: auto; /* Allow scrolling when expanded */
+      overflow-x: hidden; /* Remove horizontal scrollbar */
+    }
+
+    .history h3 {
+      color: #d3d3d3;
+      margin-bottom: 15px;
+      text-align: center;
+      display: none; /* Hidden when collapsed */
+    }
+
+    .history.expanded h3 {
+      display: block; /* Visible when expanded */
+    }
+
+    .chat-history {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: none; /* Hidden when collapsed */
+    }
+
+    .history.expanded .chat-history {
+      display: block; /* Visible when expanded */
+      width: 100%;
+    }
+
+    .chat-history li {
+      padding: 10px;
+      margin-bottom: 5px;
+      background: #252525;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .chat-history li:hover {
+      background: #3d3d3d;
+    }
+
+    /* Main Content */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+      margin-left: 50px; /* Adjust for sidebar width */
+      transition: margin-left 0.3s ease;
+    }
+
+    .main.with-expanded-history {
+      margin-left: 250px; /* Adjust for expanded sidebar width */
+    }
+
+    .container {
+      text-align: center;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    h2 {
+      color: #d3d3d3; /* Light-grey header color */
+      margin-bottom: 20px;
+    }
+
+    #chat {
+      border: 1px solid var(--border-light, currentColor);
+      border-radius: 5px;
+      padding: 1em;
+      height: 300px;
+      overflow-y: auto;
+      margin-bottom: 1em;
+      background: #18181b;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      color: #fff;
+    }
+
+    .user {
+      color: #60a5fa;
+    }
+
+    .bot {
+      color: #34d399;
+    }
+
+    .input-container {
+      position: relative;
+      width: 100%;
+    }
+
+    #message {
+      width: 100%;
+      padding: 10px;
+      font-size: 1rem;
+      border: 1px solid var(--border-light, currentColor);
+      border-radius: 5px;
+      box-sizing: border-box;
+      color: #fff;
+      background: #18181b;
+      resize: none; /* Disable manual resizing */
+      overflow-y: hidden; /* Removes scrollbar */
+      min-height: 50px; /* Minimum height */
+    }
+
+    #message:focus {
+      border-color: var(--focus-highlight); /* Highlight grey color */
+      outline: none;
+      box-shadow: 0 0 5px var(--focus-highlight); /* Grey shadow */
+    }
+
+    #send-button {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%) rotate(90deg); /* Point arrow downward */
+      background-color: #fff; /* White background */
+      border: none;
+      color: #808080; /* Grey arrow */
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+      transition: transform 0.3s ease, background-color 0.3s ease; /* Hover effect */
+    }
+
+    #send-button:hover {
+      background-color: #e6e6e6; /* Slightly darker white on hover */
+      transform: translateY(-50%) rotate(0deg) scale(1.1); /* Rotate and scale */
+    }
+
+    #send-button:active {
+      background-color: #d3d3d3; /* Darker shade on active state */
+    }
+
+    #send-button svg {
+      fill: #808080; /* Grey arrow color */
+      width: 20px;
+      height: 20px;
+    }
+
+    /* Toggle Button inside Sidebar */
+    .toggle-button {
+      background-color: #fff;
+      border: none;
+      color: #808080;
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+      transition: transform 0.3s ease, background-color 0.3s ease;
+      margin-bottom: 10px;
+    }
+
+    .toggle-button:hover {
+      background-color: #e6e6e6;
+    }
+
+    .toggle-button svg {
+      width: 20px;
+      height: 20px;
+      fill: #808080;
+    }
+
+    .toggle-button:hover svg {
+      fill: #fff;
+    }
+  </style>
+</head>
+<body>
+  <!-- History Sidebar -->
+  <div class="history" id="history-panel">
+    <button class="toggle-button" id="toggle-button" onclick="toggleHistory()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M3.4 11.6L20.3 3c.6-.3 1.3.2 1.3.9v16.2c0 .7-.7 1.2-1.3.9l-16.9-8.6c-.7-.3-.7-1.3 0-1.5z"/>
+      </svg>
+    </button>
+    <h3>Chat History</h3>
+    <ul class="chat-history" id="chat-history"></ul>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main" id="main-content">
+    <div class="container">
+      <h2>AI LEARNING ASSISTANT</h2>
+      <div id="chat"></div>
+      <div class="input-container">
+        <textarea id="message" placeholder="Ask me any programming question..."></textarea>
+        <button id="send-button" onclick="sendMessage()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M3.4 11.6L20.3 3c.6-.3 1.3.2 1.3.9v16.2c0 .7-.7 1.2-1.3.9l-16.9-8.6c-.7-.3-.7-1.3 0-1.5z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const historyPanel = document.getElementById("history-panel");
+    const mainContent = document.getElementById("main-content");
+    const toggleButton = document.getElementById("toggle-button");
+
+    async function fetchHistory() {
+      try {
+        console.log("Fetching history...");
+        const res = await fetch("/api/history");
+        console.log("Response status:", res.status);
+
+        if (!res.ok) throw new Error(`Failed to fetch history: ${res.status}`);
+
+        const history = await res.json();
+        console.log("Fetched history:", history);
+
+        const chatHistoryElement = document.getElementById("chat-history");
+        chatHistoryElement.innerHTML = ""; // Clear previous history
+
+        history.forEach((item, index) => {
+          const li = document.createElement("li");
+          li.textContent = `Chat ${index + 1}`;
+          li.onclick = () => displayChat(item);
+          chatHistoryElement.appendChild(li);
+        });
+      } catch (error) {
+        console.error("Error fetching history:", error);
+      }
+    }
+
+    function displayChat(item) {
+      const chat = document.getElementById("chat");
+      chat.innerHTML = `<p class="user"><b>You:</b> ${item.user}</p><p class="bot"><b>AI:</b> ${item.bot}</p>`;
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById("message");
+      const chat = document.getElementById("chat");
+      const msg = input.value;
+
+      if (!msg.trim()) return; // Prevent sending empty messages
+
+      chat.innerHTML += `<p class="user"><b>You:</b> ${msg}</p>`;
+      input.value = "";
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg }),
+      });
+
+      const data = await res.json();
+      chat.innerHTML += `<p class="bot"><b>AI:</b> ${data.response}</p>`;
+      chat.scrollTop = chat.scrollHeight;
+
+      fetchHistory(); // Refresh history
+    }
+
+    function toggleHistory() {
+      historyPanel.classList.toggle("expanded");
+      mainContent.classList.toggle("with-expanded-history");
+    }
+
+    window.onload = fetchHistory; // Load history on page load
+  </script>
+</body>
+</html>
