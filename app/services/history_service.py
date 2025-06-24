@@ -1,63 +1,55 @@
 import json
 import os
-from typing import List, Dict
+from typing import List, Dict, Union
 
 HISTORY_FILE = os.path.join(os.path.dirname(__file__), "chat_history.json")
 
-print(f"Absolute path to history file: {os.path.abspath(HISTORY_FILE)}")
-
 # Load chat history from the file
-def load_history() -> List[Dict]:
+def load_history() -> List[List[Dict[str, str]]]:
     """
-    Load chat history from the HISTORY_FILE.
-    If the file doesn't exist, return a hint indicating FileNotFoundError.
-    If the file contains invalid JSON, return a hint indicating JSONDecodeError.
-    If the file is empty, return a hint indicating Empty JSON.
+    Load chat history as a list of conversations (each a list of message dicts).
+    Returns an empty list if the file is not found or invalid.
     """
     try:
         with open(HISTORY_FILE, "r") as f:
             data = json.load(f)
-            if not data:  # Check if the JSON is empty
-                return [{"hint": "Empty JSON"}]
+            if not isinstance(data, list):
+                return []  # Fallback to empty if structure is unexpected
             return data
     except FileNotFoundError:
-        # Return a hint if the file does not exist
-        return [{"hint": "FileNotFoundError"}]
+        return []  # No history yet
     except json.JSONDecodeError:
-        # Return a hint if the file contains invalid JSON
-        return [{"hint": "JSONDecodeError"}]
+        return []  # Invalid file content
+
 
 # Save chat history to the file
-def save_history(history: List[Dict]) -> None:
+def save_history(history: List[List[Dict[str, str]]]) -> None:
     """
-    Save chat history to the HISTORY_FILE.
-    Overwrites the file with the new history.
+    Save the entire list of conversations to the HISTORY_FILE.
     """
     with open(HISTORY_FILE, "w") as f:
         json.dump(history, f, indent=4)
 
-# Delete a chat history item
-def delete_history_item(index: int) -> Dict:
+
+# Delete a full conversation by its index
+def delete_history_item(index: int) -> Dict[str, Union[str, List[Dict[str, str]]]]:
     """
-    Delete a chat history item by its index.
-    Returns a dictionary with status and message.
+    Delete a conversation by its index.
     """
     try:
         history = load_history()
-        # Check if there's a hint in the history
-        if len(history) == 1 and "hint" in history[0]:
-            return {"status": "error", "message": f"Cannot delete: {history[0]['hint']}"}
 
-        # Check if the index is valid
         if index < 0 or index >= len(history):
-            return {"status": "error", "message": "Invalid index"}
+            return {"status": "error", "message": f"Invalid index: {index}"}
 
-        # Remove the item
         removed_item = history.pop(index)
-
-        # Save the updated history
         save_history(history)
 
-        return {"status": "success", "message": "History item deleted", "deleted_item": removed_item}
+        return {
+            "status": "success",
+            "message": f"Conversation {index} deleted",
+            "deleted_item": removed_item
+        }
+
     except Exception as e:
         return {"status": "error", "message": f"Failed to delete history item: {str(e)}"}
