@@ -8,7 +8,6 @@ from .history_service import (
     load_history_from_db, get_conversation_ids, get_conversation,
 )
 from .togetherai_service import ask_together_ai
-import os
 
 router = APIRouter(prefix="/api")
 

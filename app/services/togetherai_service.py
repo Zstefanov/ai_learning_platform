@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 import httpx
 
+# Together AI Service -> This service interacts with the Together AI API to get responses from a specified model.
 # Load environment variables
 load_dotenv(dotenv_path=".env")
 API_KEY = os.getenv("TOGETHER_API_KEY")

@@ -2,6 +2,8 @@ import sqlite3
 import json
 import os
 
+
+# This script was used for the initial import of the chat history from a JSON file into an SQLite database.
 def create_connection(db_file):
     try:
         connection = sqlite3.connect(db_file)
