@@ -11,11 +11,10 @@ const chatBox = document.getElementById("chat");
 const dropdownMenu = document.getElementById("dropdown-menu");
 
 // Global variables
-let fullRawHistory = [];
-let itemToDeleteIndex = null;
-let activeConvoIndex = null; // Track which conversation is active
+let fullRawHistory = []; // [{ conversation_id, messages }]
+let itemToDeleteConversationId = null;
+let activeConvoId = null; // Track which conversation is active
 
-// Initialize marked.js options when DOM is loaded
 function initializeMarked() {
   marked.setOptions({
     highlight: function(code, lang) {
@@ -28,12 +27,10 @@ function initializeMarked() {
   });
 }
 
-// Dropdown functionality
 function toggleDropdown() {
   dropdownMenu.classList.toggle("show");
 }
 
-// Close the dropdown if clicked outside
 window.onclick = function(event) {
   if (!event.target.matches('.dropdown-button')) {
     if (dropdownMenu.classList.contains('show')) {
@@ -42,10 +39,9 @@ window.onclick = function(event) {
   }
 }
 
-// Chat management
 function newChat() {
   clearChatBox();
-  activeConvoIndex = null; // Next message will create a new chat
+  activeConvoId = null;
   dropdownMenu.classList.remove('show');
 }
 
@@ -55,13 +51,15 @@ function clearChatBox() {
   messageInput.focus();
 }
 
-// History management
+// ----------- HISTORY MANAGEMENT ---------
 function transformHistory(rawHistory) {
+  // rawHistory: [{conversation_id, messages: [...]}, ...]
   fullRawHistory = rawHistory;
-  return rawHistory.map(conversation => {
-    const firstUserMsg = conversation.find(msg => msg.role === "user");
+  return rawHistory.map(convo => {
+    const firstUserMsg = convo.messages.find(msg => msg.role === "user");
     return {
       user: firstUserMsg ? firstUserMsg.content : "(no user message)",
+      conversation_id: convo.conversation_id
     };
   });
 }
@@ -90,30 +88,29 @@ function createSummary(text, maxLength = 15) {
   }
 }
 
-function displayChatByIndex(index) {
-  const conversation = fullRawHistory[index];
-  if (!conversation) return;
+function displayChatByConversationId(conversation_id) {
+  const conversationObj = fullRawHistory.find(c => c.conversation_id === conversation_id);
+  if (!conversationObj) return;
 
   chatBox.innerHTML = "";
 
-  conversation.forEach(msg => {
+  conversationObj.messages.forEach(msg => {
     const role = msg.role === "assistant" ? "bot" : "user";
     addMessageToChat(role, msg.content, role === "bot");
   });
 
   chatBox.scrollTop = chatBox.scrollHeight;
-  activeConvoIndex = index; // Track current selected conversation
+  activeConvoId = conversation_id;
 }
 
 function renderHistory(history) {
   const chatHistoryElement = document.getElementById("chat-history");
   chatHistoryElement.innerHTML = "";
 
-  history.forEach((item, index) => {
+  history.forEach((item) => {
     const li = document.createElement("li");
     const summary = createSummary(item.user);
     li.textContent = summary;
-    li.dataset.index = index;
     li.title = item.user;
 
     const deleteBtn = document.createElement("button");
@@ -121,30 +118,37 @@ function renderHistory(history) {
     deleteBtn.setAttribute("aria-label", "Delete chat");
     deleteBtn.onclick = (e) => {
       e.stopPropagation();
-      showDeleteConfirmation(index);
+      showDeleteConfirmation(item.conversation_id);
     };
 
     li.appendChild(deleteBtn);
-    li.onclick = () => displayChatByIndex(index);
+    li.onclick = () => displayChatByConversationId(item.conversation_id);
 
     chatHistoryElement.appendChild(li);
   });
 }
 
-// Modal functionality
-function showDeleteConfirmation(index) {
-  itemToDeleteIndex = index;
+// ----------- MODAL / DELETE -----------
+function showDeleteConfirmation(conversation_id) {
+  itemToDeleteConversationId = conversation_id;
   confirmModal.classList.add("active");
 }
 
 function hideDeleteConfirmation() {
   confirmModal.classList.remove("active");
-  itemToDeleteIndex = null;
+  itemToDeleteConversationId = null;
 }
 
-async function deleteHistoryItem(index) {
+confirmDeleteBtn.addEventListener("click", () => {
+  if (itemToDeleteConversationId !== null) {
+    deleteHistoryItem(itemToDeleteConversationId);
+  }
+  hideDeleteConfirmation();
+});
+
+async function deleteHistoryItem(conversation_id) {
   try {
-    const res = await fetch(`/api/history/${index}`, {
+    const res = await fetch(`/api/history/${conversation_id}`, {
       method: 'DELETE',
     });
 
@@ -156,9 +160,8 @@ async function deleteHistoryItem(index) {
     clearChatBox();
     fetchHistory();
 
-    // If we deleted the currently viewed conversation, reset activeConvoIndex
-    if (activeConvoIndex === index) {
-      activeConvoIndex = null;
+    if (activeConvoId === conversation_id) {
+      activeConvoId = null;
     }
 
   } catch (error) {
@@ -167,7 +170,7 @@ async function deleteHistoryItem(index) {
   }
 }
 
-// Chat display functionality
+// ----------- CHAT DISPLAY -------------
 function addMessageToChat(role, content, parseMarkdown = false) {
   const messageDiv = document.createElement('div');
   messageDiv.className = `message ${role}`;
@@ -197,7 +200,7 @@ function addMessageToChat(role, content, parseMarkdown = false) {
   });
 }
 
-// Message sending functionality
+// ----------- MESSAGE SENDING ---------
 async function sendMessage() {
   const msg = messageInput.value;
 
@@ -211,11 +214,10 @@ async function sendMessage() {
       message: msg
     };
 
-    if (activeConvoIndex === null) {
-      // New chat
+    if (activeConvoId === null) {
       payload.new_session = true;
     } else {
-      payload.convo_index = activeConvoIndex;
+      payload.convo_index = activeConvoId;
     }
 
     const res = await fetch("/api/chat", {
@@ -233,9 +235,8 @@ async function sendMessage() {
     addMessageToChat('bot', data.response, true);
     chatBox.scrollTop = chatBox.scrollHeight;
 
-    // Update active index if new conversation was created
     if ('convo_index' in data) {
-      activeConvoIndex = data.convo_index;
+      activeConvoId = data.convo_index;
     }
 
     fetchHistory();
@@ -254,23 +255,14 @@ async function sendMessage() {
   }
 }
 
-// UI functionality
+// ----------- UI -------------
 function toggleHistory() {
   historyPanel.classList.toggle("expanded");
   mainContent.classList.toggle("with-expanded-history");
   dropdownContainer.classList.toggle("with-expanded-history");
 }
 
-// Event listeners
 function setupEventListeners() {
-  // Modal event listeners
-  confirmDeleteBtn.addEventListener("click", () => {
-    if (itemToDeleteIndex !== null) {
-      deleteHistoryItem(itemToDeleteIndex);
-    }
-    hideDeleteConfirmation();
-  });
-
   cancelDeleteBtn.addEventListener("click", hideDeleteConfirmation);
 
   // Close modal if clicking outside of it
@@ -302,7 +294,6 @@ function setupEventListeners() {
   });
 }
 
-// Initialize the application
 window.onload = function() {
   initializeMarked();
   setupEventListeners();

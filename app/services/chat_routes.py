@@ -1,5 +1,12 @@
 from fastapi import APIRouter, Request
-from .history_service import load_history, save_history, load_history_from_db
+from starlette.responses import JSONResponse
+
+from .history_service import (
+    get_next_conversation_id,
+    add_message_to_db,
+    delete_history_item,
+    load_history_from_db, get_conversation_ids, get_conversation,
+)
 from .togetherai_service import ask_together_ai
 import os
 
@@ -10,49 +17,39 @@ async def chat(request: Request):
     body = await request.json()
     user_message = body.get("message")
     new_session = body.get("new_session", False)
-    convo_index = body.get("convo_index", None)
+    convo_index = body.get("convo_index", None)  # This is conversation_id
 
     if not user_message:
         return {"error": "No message provided"}
 
-    history = load_history()
-
-    if not history or new_session:
-        history.append([])  # start a new conversation list if empty or new session requested
-        convo_index = len(history) - 1 #index of the new conversation
-
-    elif convo_index is not None and 0 <= convo_index < len(history):
-        pass
+    # Start a new conversation if needed
+    if new_session or convo_index is None:
+        conversation_id = get_next_conversation_id()
     else:
-        current_convo = history[-1]
+        conversation_id = convo_index
 
-    current_convo = history[convo_index]
-    current_convo.append({"role": "user", "content": user_message})
+    # Save user message
+    add_message_to_db(conversation_id, "user", user_message)
 
+    # Get assistant response and save it
     bot_response = await ask_together_ai(user_message)
-    current_convo.append({"role": "assistant", "content": bot_response})
+    add_message_to_db(conversation_id, "assistant", bot_response)
 
-    save_history(history)
-
-    return {"response": bot_response, "convo_index": convo_index}
+    return {"response": bot_response, "convo_index": conversation_id}
 
 @router.get("/history")
-async def get_history():
-    # /old implementation/ Return raw chat history JSON (list of conversations) - refactored to use DB
-    # return load_history()
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    db_path = os.path.join(base_dir, "db", "my_database.db")
-    return load_history_from_db(db_path)
+def get_history():
+    conversation_ids = get_conversation_ids()
+    result = []
+    for cid in conversation_ids:
+        messages = get_conversation(cid)
+        result.append({
+            "conversation_id": cid,
+            "messages": messages
+        })
+    return result
 
-
-@router.delete("/history/{index}")
-async def delete_history_item(index: int):
-    history = load_history()
-
-    if index < 0 or index >= len(history):
-        return {"status": "error", "message": f"Invalid index: {index}"}
-
-    history.pop(index)
-    save_history(history)
-
-    return {"status": "success", "message": f"Conversation {index} deleted"}
+@router.delete("/history/{conversation_id}")
+async def delete_history_item_route(conversation_id: int):
+    result = delete_history_item(conversation_id)
+    return JSONResponse(content=result)
