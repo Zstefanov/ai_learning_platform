@@ -6,3 +6,5 @@ pydantic
 passlib
 starlette
 requests
+pytest
+pytest-asyncio
