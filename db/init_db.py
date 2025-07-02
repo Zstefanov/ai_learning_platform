@@ -16,8 +16,10 @@ def create_table(connection):
     try:
         cursor = connection.cursor()
         #cursor.execute("DROP TABLE IF EXISTS history;") #-> Uncomment this line to drop the table if needed
+
+        # FIX APPLIED BELOW: Added IF NOT EXISTS to avoid error if table already exists
         sql_create_history_table = """
-        CREATE TABLE history (
+        CREATE TABLE IF NOT EXISTS history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             conversation_id INTEGER NOT NULL,
             role TEXT NOT NULL,
@@ -26,7 +28,21 @@ def create_table(connection):
         );
         """
         cursor.execute(sql_create_history_table)
-        print("Table 'history' created with new schema.")
+        print("Table 'history' created if it did not exist.")
+
+        #cursor.execute("DROP TABLE IF EXISTS users;") #-> Uncomment this line to drop the table if needed
+        sql_create_users_table = """
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                """
+        cursor.execute(sql_create_users_table)
+        print("Table 'users' created if it did not exist.")
+
     except sqlite3.Error as e:
         print(e)
 
