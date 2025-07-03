@@ -42,7 +42,7 @@ def load_history_from_db(db_path):
     # Convert to list-of-lists like the old JSON structure
     return [msgs for _, msgs in sorted(conversations.items())]
 
-# Save chat history to the json file
+# Save chat history to the JSON file
 def save_history(history: List[List[Dict[str, str]]]) -> None:
     """
     Save the entire list of conversations to the HISTORY_FILE.

@@ -9,10 +9,10 @@ app = FastAPI()
 # Enable frontend access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Replace "*" with specific origins if needed for security
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # Replace "*" with specific HTTP methods if needed
-    allow_headers=["*"],  # Replace "*" with specific headers if needed
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Include chat API
@@ -23,7 +23,7 @@ for route in app.routes:
 
 # Serve frontend files
 app.mount(
-    path="/",  # Change from "/" to "/static"
+    path="/",
     app=StaticFiles(directory=os.path.join(os.path.dirname(__file__), "app/frontend"), html=True),
     name="frontend"
 )

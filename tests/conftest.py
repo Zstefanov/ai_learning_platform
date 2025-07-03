@@ -23,5 +23,5 @@ async def async_client():
 
 @pytest.fixture(scope="module")
 def db_path():
-    # Adjust the path to your database location here
+    # Path to db location
     return os.path.abspath(os.path.join(os.path.dirname(__file__), "../db/my_database.db"))

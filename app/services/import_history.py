@@ -35,7 +35,6 @@ def import_history(json_path, db_path):
     print("Import completed.")
 
 if __name__ == "__main__":
-    # Go up two levels from 'app/services' to project root, then into 'db'
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     db_path = os.path.join(base_dir, "db", "my_database.db")
     json_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chat_history.json")

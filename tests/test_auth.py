@@ -6,6 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Test for user registration, login, and deletion using FastAPI and SQLite
+# Not using an external library for test data generation(Faker or similar), overkill at this stage
 
 @pytest.mark.asyncio
 async def test_register_login_delete_user(async_client, db_path):
