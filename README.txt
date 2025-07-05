@@ -5,6 +5,7 @@ Overview:
 ---------
 This project is a chatbot powered by TogetherAI, designed to assist users with coding tasks.
 Similar to GitHub Copilot or OpenAI's ChatGPT, the chatbot provides coding suggestions, answers programming-related questions, and helps debug and improve code snippets.
+This is a purely educational project on AI implementation and it is not intended for commercial use.
 
 Key Features:
 -------------
@@ -12,6 +13,7 @@ Key Features:
 - Debugging and optimization support for code.
 - Suggestions for code implementation based on user requirements.
 - User-friendly interface for seamless interaction.
+- DB implementation with SQLite to store user queries and responses for future reference.
 - API tests for the endpoints to ensure reliability and performance.
 
 How It Works:
