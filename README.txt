@@ -12,6 +12,7 @@ Key Features:
 - Debugging and optimization support for code.
 - Suggestions for code implementation based on user requirements.
 - User-friendly interface for seamless interaction.
+- API tests for the endpoints to ensure reliability and performance.
 
 How It Works:
 -------------
